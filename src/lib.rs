@@ -3,6 +3,7 @@ use std::path::Path;
 
 mod classifier;
 mod generator;
+mod interner;
 mod model;
 mod tokenizer;
 

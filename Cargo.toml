@@ -9,3 +9,4 @@ hashbrown = { version = "0.17.1", features = ["serde"] }  # keep your current ve
 bincode = { version = "2", features = ["serde"] }
 serde_json = "1.0.154"
 serde = { version = "1.0.229", features = ["derive"] }
+rustc-hash = "2.1.3"

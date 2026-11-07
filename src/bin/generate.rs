@@ -56,7 +56,7 @@ fn main() {
         .get(2)
         .map(String::as_str)
         .unwrap_or(DEFAULT_TRAINING_DIR);
-    let model_name = format!("{DEFAULT_MODEL_PATH}/model_{}.bin", NUMERO_DE_POSICOES,);
+    let model_name = format!("{DEFAULT_MODEL_PATH}/model_{}_0.bin", NUMERO_DE_POSICOES,);
     let model_path = args.get(3).map(String::as_str).unwrap_or(&model_name);
 
     let mut prompt = String::new();

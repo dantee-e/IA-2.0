@@ -86,9 +86,10 @@ pub fn tokenize(input: &str) -> TokenizedString {
 /// Pushes the current token (if any) onto `tokens` and resets it.
 fn flush(tokens: &mut Vec<Token>, cur_token: &mut Token, mask: Mask) {
     if matches!(mask, Mask::Unknown | Mask::Whitespace) {
+        *cur_token = Token::default();
         return;
     }
-    let mut token = std::mem::replace(cur_token, Token::default());
+    let mut token = std::mem::take(cur_token);
     token.mask = mask;
     tokens.push(token);
 }

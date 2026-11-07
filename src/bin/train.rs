@@ -1,4 +1,4 @@
-use ai2::{Model, NUMERO_DE_POSICOES, classify, save_model, tokenize};
+use ai2::{Model, NUMERO_DE_POSICOES, classify, load_model, save_model, tokenize};
 use hashbrown::HashMap;
 
 const TRAINING_JSON: &str = "tests/long_texts/gutenberg_v2.jsonl";
@@ -14,12 +14,41 @@ fn main() {
     let deserializer = serde_json::Deserializer::from_reader(file);
     let mut model: Model = HashMap::new();
 
-    let model_name = format!("{DEFAULT_MODEL_PATH}/model_{}.bin", NUMERO_DE_POSICOES,);
+    let run = 0;
+
+    let model_name = format!(
+        "{DEFAULT_MODEL_PATH}/model_{}_{}.bin",
+        NUMERO_DE_POSICOES, run
+    );
+
+    let skip = 1100;
+
+    // while std::fs::exists(model_name.clone()).unwrap() {
+    //     println!("Exists model {}", model_name);
+    //     model_name = format!(
+    //         "{DEFAULT_MODEL_PATH}/model_{}_{}.bin",
+    //         NUMERO_DE_POSICOES, run
+    //     );
+    //     run += 1;
+    // }
+
+    if std::fs::exists(model_name.clone()).unwrap() {
+        println!("Loading model");
+        model = load_model(model_name.clone()).unwrap();
+        println!("Model loaded");
+    }
 
     for (i, line) in deserializer.into_iter::<JsonLines>().enumerate() {
-        println!("{}% complete,  i={i}/213000", i as f32 * 100.0 / 213000.0);
-        println!("Entries in model: {}", model.keys().len());
-        if i % 10 == 0 {
+        if i < skip {
+            println!("Skipping i = {i}");
+            continue;
+        }
+        println!(
+            "{}% complete, Entries {}, i={i}/213000",
+            i as f32 * 100.0 / 213000.0,
+            model.keys().len(),
+        );
+        if i % 100 == 0 {
             match save_model(&model, model_name.clone()) {
                 Ok(_) => println!("Saved model."),
                 Err(_) => eprintln!("Failed to save model"),

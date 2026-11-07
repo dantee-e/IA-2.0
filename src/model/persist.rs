@@ -8,9 +8,16 @@ use std::{
 use super::Model;
 
 pub fn save_model(model: &Model, path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
-    let mut writer = BufWriter::new(File::create(path)?);
+    let path = path.as_ref();
+    let tmp = path.with_extension("tmp");
+
+    let mut writer = BufWriter::new(File::create(&tmp)?);
     bincode::serde::encode_into_std_write(model, &mut writer, bincode::config::standard())?;
     writer.flush()?;
+    writer.get_ref().sync_all()?; // make sure it hit disk
+    drop(writer);
+
+    std::fs::rename(&tmp, path)?; // atomic: readers never see a half-written file
     Ok(())
 }
 
