@@ -12,6 +12,12 @@ impl Token {
     pub fn push(&mut self, c: char) {
         self.content.push(c);
     }
+    pub fn space() -> Self {
+        Self {
+            content: " ".to_string(),
+            mask: Mask::Whitespace,
+        }
+    }
 }
 
 impl Default for Token {
@@ -67,7 +73,6 @@ pub fn tokenize(input: &str) -> TokenizedString {
             mask = new_mask.clone();
         }
 
-        // Whitespace is a separator only; it never goes into a token.
         if new_mask != Mask::Whitespace {
             cur_token.push(c);
         }

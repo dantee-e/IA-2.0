@@ -1,7 +1,5 @@
-use std::cmp::Reverse;
-
 use hashbrown::HashMap;
-use rand::{RngExt, seq::IndexedRandom};
+use rand::seq::IndexedRandom;
 
 use crate::{Mask, Model, NUMERO_DE_POSICOES, Token, tokenizer::TokenizedString};
 
@@ -36,5 +34,9 @@ pub fn generate(tokens: &mut TokenizedString, model: &Model) -> Token {
     };
 
     tokens.push(token.clone());
+
+    if token.mask == Mask::Punctuation {
+        tokens.push(Token::space());
+    }
     token
 }

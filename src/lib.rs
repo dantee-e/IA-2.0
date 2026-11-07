@@ -1,24 +1,24 @@
 use std::io;
 use std::path::Path;
 
-use hashbrown::HashMap;
-
 mod classifier;
 mod generator;
+mod model;
 mod tokenizer;
 
 pub use classifier::classify;
 pub use generator::generate;
+use hashbrown::HashMap;
+pub use model::Model;
+pub use model::persist::{load_model, save_model};
 pub use tokenizer::Mask;
 pub use tokenizer::Token;
 pub use tokenizer::tokenize;
 
-pub type Model = HashMap<String, HashMap<usize, HashMap<String, usize>>>;
-
-const NUMERO_DE_POSICOES: usize = 30;
+pub const NUMERO_DE_POSICOES: usize = 100;
 
 pub fn train_from_dir(dir: impl AsRef<Path>) -> io::Result<Model> {
-    let mut model: Option<Model> = None;
+    let mut model: Model = HashMap::new();
 
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
@@ -36,10 +36,10 @@ pub fn train_from_dir(dir: impl AsRef<Path>) -> io::Result<Model> {
         };
 
         let tokenized = tokenize(&text);
-        model = Some(classify(&tokenized, model));
+        classify(&tokenized, &mut model);
     }
 
-    Ok(model.unwrap_or_default())
+    Ok(model)
 }
 
 #[cfg(test)]
@@ -51,7 +51,7 @@ mod tests {
     fn classify_phrase() {
         let text = "To tokenize sentences in Rust, you can use specialized libraries depending on your needs, such as sentence for TTS-style lexing, rust-punkt for unsupervised sentence splitting, or vtext for Unicode-based segmentation. For high-performance NLP tasks involving modern language models (e.g., BERT, SentencePiece), the rust_tokenizers crate is the standard choice, offering support for WordPiece, BPE, and Unigram models.";
         let tokenized_text = tokenize(text);
-        let _: Model = classify(&tokenized_text, None);
+        classify(&tokenized_text, &mut HashMap::new());
 
         // for token in classified.into_iter() {
         //     println!("{}:", token.0);
@@ -69,12 +69,13 @@ mod tests {
 
     #[test]
     fn classify_beemovie() {
-        // include_str!("../tests/long_texts/beemovie.txt");
         let beemovie_script =
             std::fs::read_to_string(format!("{LONG_TEXTS}/beemovie.txt")).unwrap();
         let mut tokenized_script = tokenize(&beemovie_script);
 
-        let model: Model = classify(&tokenized_script, None);
+        let mut model: Model = HashMap::new();
+
+        classify(&tokenized_script, &mut model);
 
         for _ in 0..100 {
             generate(&mut tokenized_script, &model);
@@ -89,7 +90,9 @@ mod tests {
             std::fs::read_to_string(format!("{LONG_TEXTS}/the_orneks_and_the_gogos.txt")).unwrap();
         let mut tokenized_script = tokenize(&the_orneks_and_the_gogos);
 
-        let model: Model = classify(&tokenized_script, None);
+        let mut model: Model = HashMap::new();
+
+        classify(&tokenized_script, &mut model);
 
         for _ in 0..100 {
             generate(&mut tokenized_script, &model);
@@ -112,14 +115,16 @@ mod tests {
             std::fs::read_to_string(format!("{LONG_TEXTS}/the_orneks_and_the_gogos.txt")).unwrap();
         let tokenized_orneks = tokenize(&the_orneks_and_the_gogos);
 
-        let model = classify(&tokenized_script, None);
-        let model2 = classify(&tokenized_orneks, Some(model));
+        let mut model: Model = HashMap::new();
+
+        classify(&tokenized_script, &mut model);
+        classify(&tokenized_orneks, &mut model);
 
         let mut my_tokenized_phrase =
             tokenize("My name is the wind and the wind does as the wind ");
 
         for _ in 0..100 {
-            generate(&mut my_tokenized_phrase, &model2);
+            generate(&mut my_tokenized_phrase, &model);
         }
         println!("{}", my_tokenized_phrase.text());
     }
