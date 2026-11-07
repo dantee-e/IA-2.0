@@ -3,7 +3,6 @@ use std::path::Path;
 
 mod classifier;
 mod generator;
-mod interner;
 mod model;
 mod tokenizer;
 
@@ -78,7 +77,7 @@ mod tests {
         classify(&tokenized_script, &mut model);
 
         for _ in 0..100 {
-            generate(&mut tokenized_script, &model);
+            generate(&mut tokenized_script, &mut model);
         }
 
         std::fs::write(format!("{RESULTS}/beemovie.txt"), tokenized_script.text()).unwrap()
@@ -95,7 +94,7 @@ mod tests {
         classify(&tokenized_script, &mut model);
 
         for _ in 0..100 {
-            generate(&mut tokenized_script, &model);
+            generate(&mut tokenized_script, &mut model);
         }
 
         std::fs::write(
@@ -124,7 +123,7 @@ mod tests {
             tokenize("My name is the wind and the wind does as the wind ");
 
         for _ in 0..100 {
-            generate(&mut my_tokenized_phrase, &model);
+            generate(&mut my_tokenized_phrase, &mut model);
         }
         println!("{}", my_tokenized_phrase.text());
     }

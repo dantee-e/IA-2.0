@@ -12,7 +12,7 @@ struct JsonLines {
 fn main() {
     let file = std::fs::File::open(TRAINING_JSON).expect("Could not find json");
     let deserializer = serde_json::Deserializer::from_reader(file);
-    let mut model: TrainingModel = HashMap::new();
+    let mut model: TrainingModel = TrainingModel::default();
 
     let run = 0;
 
@@ -46,7 +46,7 @@ fn main() {
         println!(
             "{}% complete, Entries {}, i={i}/213000",
             i as f32 * 100.0 / 213000.0,
-            model.keys().len(),
+            model.len()
         );
         if i % 100 == 0 {
             match save_model(&model, model_name.clone()) {

@@ -12,7 +12,7 @@ pub fn classify(tokenized_string: &TokenizedString, model: &mut TrainingModel) {
         }
 
         for (i, token) in window[1..].iter().enumerate() {
-            model.insert_or_count((root.content.clone(), i), token.content.clone());
+            model.insert_or_count((root.content.clone(), i as u16), token.content.clone());
         }
     }
 }

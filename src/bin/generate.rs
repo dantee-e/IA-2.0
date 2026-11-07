@@ -67,11 +67,11 @@ fn main() {
         process::exit(1);
     }
 
-    let model = load_or_train(model_path, training_dir);
+    let mut model = load_or_train(model_path, training_dir);
 
     let mut tokenized = tokenize(&prompt);
     for _ in 0..num_tokens {
-        generate(&mut tokenized, &model);
+        generate(&mut tokenized, &mut model);
     }
 
     let mut out = io::stdout().lock();
