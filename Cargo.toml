@@ -1,0 +1,8 @@
+[package]
+name = "ai2"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hashbrown = "0.17.1"
+rand = "0.10.3"
