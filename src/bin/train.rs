@@ -1,5 +1,4 @@
 use ai2::{NUMERO_DE_POSICOES, TrainingModel, classify, load_model, save_model, tokenize};
-use hashbrown::HashMap;
 
 const TRAINING_JSON: &str = "tests/long_texts/gutenberg_v2.jsonl";
 const DEFAULT_MODEL_PATH: &str = "models";

@@ -9,7 +9,7 @@ mod tokenizer;
 pub use classifier::classify;
 pub use generator::generate;
 pub use model::TrainingModel;
-pub use model::persist::{load_model, save_model};
+// pub use model::persist::{load_model, save_model};
 pub use tokenizer::Mask;
 pub use tokenizer::Token;
 pub use tokenizer::tokenize;
