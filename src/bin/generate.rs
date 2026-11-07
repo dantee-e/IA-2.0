@@ -5,12 +5,14 @@ use std::{
     process,
 };
 
-use ai2::{Model, NUMERO_DE_POSICOES, generate, load_model, save_model, tokenize, train_from_dir};
+use ai2::{
+    NUMERO_DE_POSICOES, TrainingModel, generate, load_model, save_model, tokenize, train_from_dir,
+};
 
 const DEFAULT_TRAINING_DIR: &str = "tests/long_texts";
 const DEFAULT_MODEL_PATH: &str = "models";
 
-fn load_or_train(model_path: &str, training_dir: &str) -> Model {
+fn load_or_train(model_path: &str, training_dir: &str) -> TrainingModel {
     if Path::new(model_path).exists() {
         eprintln!("loading model from {model_path}...");
         match load_model(model_path) {

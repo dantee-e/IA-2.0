@@ -1,4 +1,4 @@
-use ai2::{Model, NUMERO_DE_POSICOES, classify, load_model, save_model, tokenize};
+use ai2::{NUMERO_DE_POSICOES, TrainingModel, classify, load_model, save_model, tokenize};
 use hashbrown::HashMap;
 
 const TRAINING_JSON: &str = "tests/long_texts/gutenberg_v2.jsonl";
@@ -12,7 +12,7 @@ struct JsonLines {
 fn main() {
     let file = std::fs::File::open(TRAINING_JSON).expect("Could not find json");
     let deserializer = serde_json::Deserializer::from_reader(file);
-    let mut model: Model = HashMap::new();
+    let mut model: TrainingModel = HashMap::new();
 
     let run = 0;
 

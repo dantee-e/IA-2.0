@@ -7,26 +7,4 @@ pub struct Interner {
     strings: Vec<String>,
 }
 
-impl Interner {
-    pub fn intern(&mut self, s: &str) -> u32 {
-        if let Some(&id) = self.ids.get(s) {
-            return id;
-        }
-        let id = self.strings.len() as u32;
-        self.strings.push(s.to_owned());
-        self.ids.insert(s.to_owned(), id);
-        id
-    }
-
-    pub fn get(&self, s: &str) -> Option<u32> {
-        self.ids.get(s).copied()
-    }
-
-    pub fn resolve(&self, id: u32) -> &str {
-        &self.strings[id as usize]
-    }
-
-    pub fn len(&self) -> usize {
-        self.strings.len()
-    }
-}
+impl Interner {}

@@ -5,9 +5,9 @@ use std::{
     path::Path,
 };
 
-use super::Model;
+use super::TrainingModel;
 
-pub fn save_model(model: &Model, path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
+pub fn save_model(model: &TrainingModel, path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
     let path = path.as_ref();
     let tmp = path.with_extension("tmp");
 
@@ -21,7 +21,7 @@ pub fn save_model(model: &Model, path: impl AsRef<Path>) -> Result<(), Box<dyn E
     Ok(())
 }
 
-pub fn load_model(path: impl AsRef<Path>) -> Result<Model, Box<dyn Error>> {
+pub fn load_model(path: impl AsRef<Path>) -> Result<TrainingModel, Box<dyn Error>> {
     let mut reader = BufReader::new(File::open(path)?);
     let model = bincode::serde::decode_from_std_read(&mut reader, bincode::config::standard())?;
     Ok(model)
