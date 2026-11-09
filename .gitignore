@@ -2,3 +2,4 @@ tests/long_texts
 target/
 tests/results
 models/
+training_models/

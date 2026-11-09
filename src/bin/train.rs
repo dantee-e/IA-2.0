@@ -1,7 +1,10 @@
-use ai2::{NUMERO_DE_POSICOES, TrainingModel, classify, load_model, save_model, tokenize};
+use ai2::{
+    NUMBER_OF_POSITIONS, TrainingModel, classify, load_training_model, save_training_model,
+    tokenize,
+};
 
 const TRAINING_JSON: &str = "tests/long_texts/gutenberg_v2.jsonl";
-const DEFAULT_MODEL_PATH: &str = "models";
+const DEFAULT_TRAINING_MODEL_PATH: &str = "training_models";
 
 #[derive(serde::Deserialize)]
 struct JsonLines {
@@ -11,46 +14,36 @@ struct JsonLines {
 fn main() {
     let file = std::fs::File::open(TRAINING_JSON).expect("Could not find json");
     let deserializer = serde_json::Deserializer::from_reader(file);
-    let mut model: TrainingModel = TrainingModel::default();
 
     let run = 0;
+    let train_with = 10000;
 
-    let model_name = format!(
-        "{DEFAULT_MODEL_PATH}/model_{}_{}.bin",
-        NUMERO_DE_POSICOES, run
-    );
+    std::fs::create_dir_all(DEFAULT_TRAINING_MODEL_PATH).expect("could not create checkpoint dir");
 
-    let skip = 1100;
+    let checkpoint_path =
+        format!("{DEFAULT_TRAINING_MODEL_PATH}/model_{NUMBER_OF_POSITIONS}_{run}.bin");
+    let final_name = format!("model_{NUMBER_OF_POSITIONS}_{run}");
 
-    // while std::fs::exists(model_name.clone()).unwrap() {
-    //     println!("Exists model {}", model_name);
-    //     model_name = format!(
-    //         "{DEFAULT_MODEL_PATH}/model_{}_{}.bin",
-    //         NUMERO_DE_POSICOES, run
-    //     );
-    //     run += 1;
-    // }
-
-    if std::fs::exists(model_name.clone()).unwrap() {
-        println!("Loading model");
-        model = load_model(model_name.clone()).unwrap();
-        println!("Model loaded");
-    }
+    let mut model = if std::fs::exists(&checkpoint_path).unwrap() {
+        println!("Loading checkpoint");
+        let m = load_training_model(checkpoint_path.clone()).expect("could not load checkpoint");
+        println!("Checkpoint loaded");
+        m
+    } else {
+        TrainingModel::default()
+    };
 
     for (i, line) in deserializer.into_iter::<JsonLines>().enumerate() {
-        if i < skip {
-            println!("Skipping i = {i}");
-            continue;
-        }
         println!(
-            "{}% complete, Entries {}, i={i}/213000",
-            i as f32 * 100.0 / 213000.0,
+            "{:.2}% complete, entries {}, i={i}/{train_with}",
+            i as f32 * 100.0 / train_with as f32,
             model.len()
         );
+
         if i % 100 == 0 {
-            match save_model(&model, model_name.clone()) {
-                Ok(_) => println!("Saved model."),
-                Err(_) => eprintln!("Failed to save model"),
+            match save_training_model(&model, checkpoint_path.clone()) {
+                Ok(_) => println!("Saved checkpoint."),
+                Err(e) => eprintln!("Failed to save checkpoint: {e}"),
             }
         }
 
@@ -63,9 +56,23 @@ fn main() {
         };
 
         classify(&tokenize(&line.text), &mut model);
+
+        if i == train_with {
+            break;
+        }
     }
 
-    if let Err(e) = save_model(&model, &model_name) {
-        eprintln!("Failed to save model: {e}");
+    // Final checkpoint, so training can be resumed or extended later.
+    if let Err(e) = save_training_model(&model, checkpoint_path.clone()) {
+        eprintln!("Failed to save checkpoint: {e}");
+    }
+
+    // Consumes the TrainingModel and writes words/strings/buckets/offsets under models/.
+    match model.into_model(&final_name) {
+        Ok(_) => println!("Wrote final model '{final_name}'"),
+        Err(e) => {
+            eprintln!("Failed to write final model '{final_name}': {e}");
+            std::process::exit(1);
+        }
     }
 }

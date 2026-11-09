@@ -51,7 +51,7 @@ impl TokenizedString {
                 .get(i + 1)
                 .is_some_and(|next| next.mask == Mask::None);
 
-            if token.mask == Mask::None && next_is_word {
+            if (token.mask == Mask::None && next_is_word) || token.mask == Mask::Punctuation {
                 out.push(' ');
             }
         }
