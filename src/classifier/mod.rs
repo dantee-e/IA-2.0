@@ -9,11 +9,7 @@ fn windows_to_end<T>(slice: &[T], n: usize) -> impl Iterator<Item = &[T]> {
 
 // Changes inplace
 pub fn classify(tokenized_string: &TokenizedString, model: &mut TrainingModel) {
-    println!("Running classify");
-    for window in windows_to_end(
-        tokenized_string.tokens().as_slice(),
-        NUMBER_OF_POSITIONS + 1,
-    ) {
+    for window in windows_to_end(tokenized_string.tokens(), NUMBER_OF_POSITIONS + 1) {
         let root = &window[0];
         if root.mask != Mask::None {
             continue;
@@ -23,5 +19,4 @@ pub fn classify(tokenized_string: &TokenizedString, model: &mut TrainingModel) {
             model.insert_or_increase_count(&root.content, i as u16, &token.content)
         }
     }
-    println!("Buckets len is {}", model.buckets.len());
 }

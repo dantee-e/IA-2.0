@@ -1,3 +1,5 @@
+use std::env;
+
 use ai2::{
     NUMBER_OF_POSITIONS, TrainingModel, classify, load_training_model, save_training_model,
     tokenize,
@@ -12,11 +14,18 @@ struct JsonLines {
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let run: u32 = args
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let train_with: usize = args
+        .get(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(10000);
+
     let file = std::fs::File::open(TRAINING_JSON).expect("Could not find json");
     let deserializer = serde_json::Deserializer::from_reader(file);
-
-    let run = 0;
-    let train_with = 10000;
 
     std::fs::create_dir_all(DEFAULT_TRAINING_MODEL_PATH).expect("could not create checkpoint dir");
 
@@ -34,13 +43,18 @@ fn main() {
     };
 
     for (i, line) in deserializer.into_iter::<JsonLines>().enumerate() {
+        if i >= train_with {
+            break;
+        }
+
         println!(
             "{:.2}% complete, entries {}, i={i}/{train_with}",
             i as f32 * 100.0 / train_with as f32,
             model.len()
         );
 
-        if i % 100 == 0 {
+        // Checkpointing rewrites the whole (multi-GB) model, so keep it rare.
+        if i % 1000 == 0 {
             match save_training_model(&model, checkpoint_path.clone()) {
                 Ok(_) => println!("Saved checkpoint."),
                 Err(e) => eprintln!("Failed to save checkpoint: {e}"),
@@ -56,10 +70,6 @@ fn main() {
         };
 
         classify(&tokenize(&line.text), &mut model);
-
-        if i == train_with {
-            break;
-        }
     }
 
     // Final checkpoint, so training can be resumed or extended later.

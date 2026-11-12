@@ -25,8 +25,7 @@ fn load_model(model_name: &str) -> Option<Model> {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    #[allow(clippy::len_zero)]
-    if args.len() < 1 || args.len() > 3 {
+    if args.len() < 2 || args.len() > 3 {
         eprintln!("usage: {} <num_tokens> [model_name] < prompt.txt", args[0]);
         process::exit(1);
     }

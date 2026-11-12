@@ -1,6 +1,27 @@
 #[cfg(test)]
 mod tests {
     use ai2::*;
+
+    #[test]
+    fn followers_respect_position_after_save() {
+        // Regression: bucket_id used a hardcoded *100 while the generator reads
+        // *NUMBER_OF_POSITIONS, so saved buckets landed in the wrong slots.
+        let mut training_model = TrainingModel::default();
+        classify(&tokenize("the cat sat on the mat"), &mut training_model);
+        let model = training_model.into_model("unit_followers").unwrap();
+
+        let at0: Vec<&str> = model.followers("cat", 0).map(|(w, _)| w).collect();
+        let at1: Vec<&str> = model.followers("cat", 1).map(|(w, _)| w).collect();
+        let at2: Vec<&str> = model.followers("cat", 2).map(|(w, _)| w).collect();
+
+        assert_eq!(at0, vec!["sat"]);
+        assert_eq!(at1, vec!["on"]);
+        assert_eq!(at2, vec!["the"]);
+
+        // unknown root yields nothing
+        assert!(model.followers("nonexistent", 0).next().is_none());
+    }
+
     #[test]
     fn classify_phrase() {
         let text = "To tokenize sentences in Rust, you can use specialized libraries depending on your needs, such as sentence for TTS-style lexing, rust-punkt for unsupervised sentence splitting, or vtext for Unicode-based segmentation. For high-performance NLP tasks involving modern language models (e.g., BERT, SentencePiece), the rust_tokenizers crate is the standard choice, offering support for WordPiece, BPE, and Unigram models.";

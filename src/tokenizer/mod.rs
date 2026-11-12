@@ -34,8 +34,8 @@ pub struct TokenizedString {
     tokens: Vec<Token>,
 }
 impl TokenizedString {
-    pub fn tokens(&self) -> Vec<Token> {
-        self.tokens.clone()
+    pub fn tokens(&self) -> &[Token] {
+        &self.tokens
     }
     pub fn push(&mut self, value: Token) {
         self.tokens.push(value);
