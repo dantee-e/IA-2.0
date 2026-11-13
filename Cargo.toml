@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["hash-buckets"]
-# Store training buckets as HashMap<u32, u32> instead of Vec<(u32, u32)>.
-# Measured on 10 books: ~37% more peak RAM, ~38% faster training.
+# Default is the Vec bucket storage: ~4-5 GB less peak RAM on the full model
+# (hashbrown allocates >=144 B per non-empty map), which matters on 19 GB boxes.
+# Enable `hash-buckets` for ~35% faster training if memory allows.
+# Note: checkpoint bucket encoding depends on this feature — build `convert`
+# with the same feature the checkpoint was written with.
+default = []
 hash-buckets = []
 
 [dependencies]

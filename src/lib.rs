@@ -209,3 +209,101 @@ pub fn write_model_from_shards(
 
     Ok(())
 }
+
+/// Converts a parallel-training checkpoint file into the generation model files
+/// under models/<name>_*.bin, streaming the checkpoint value-by-value: only one
+/// bucket (HashMap) is in memory at a time while decoding; each shard is kept
+/// afterwards as flat 8-byte (follower id, count) pairs plus byte offsets, so
+/// peak memory is roughly the flat model size (~pairs x 8B), not the expanded
+/// in-memory bucket maps.
+///
+/// Note: the checkpoint's bucket encoding depends on the `hash-buckets`
+/// feature, so build the converter with the same feature the checkpoint was
+/// written with.
+pub fn convert_checkpoint_to_model(
+    checkpoint_path: impl AsRef<Path>,
+    name: &str,
+) -> io::Result<()> {
+    use crate::model::{model_path, sorted_entries, write_atomic, DEFAULT_MODEL_PATH};
+    use std::fs::File;
+    use std::io::{BufReader, Write};
+
+    let mut reader = BufReader::new(File::open(checkpoint_path)?);
+    let config = bincode::config::standard();
+
+    // ParallelCheckpoint { words, strings, shards, num_shards, lines_done },
+    // decoded field by field so shards can be freed as they are flattened.
+    let words: HashMap<String, u32> =
+        bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+    let strings: Vec<String> =
+        bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+    let n_words = strings.len();
+    let shards_len: usize =
+        bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+
+    // Flatten each shard to raw bytes + per-bucket byte offsets.
+    let mut flat_shards: Vec<(Vec<u8>, Vec<usize>)> = Vec::with_capacity(shards_len);
+    for s in 0..shards_len {
+        let buckets_len: usize =
+            bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+        let mut flat = Vec::new();
+        let mut offsets = Vec::with_capacity(buckets_len + 1);
+        for _ in 0..buckets_len {
+            let bucket: Bucket =
+                bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+            offsets.push(flat.len());
+            for (id, count) in sorted_entries(&bucket) {
+                flat.extend_from_slice(&id.to_le_bytes());
+                flat.extend_from_slice(&count.to_le_bytes());
+            }
+        }
+        offsets.push(flat.len());
+        flat_shards.push((flat, offsets));
+    }
+
+    let num_shards: usize =
+        bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+    let _lines_done: usize =
+        bincode::serde::decode_from_std_read(&mut reader, config).map_err(io::Error::other)?;
+    assert_eq!(num_shards, shards_len, "checkpoint shard count mismatch");
+
+    std::fs::create_dir_all(DEFAULT_MODEL_PATH)?;
+
+    write_atomic(&model_path(name, "words"), |w| {
+        bincode::serde::encode_into_std_write(&words, w, config)
+            .map(|_| ())
+            .map_err(io::Error::other)
+    })?;
+    write_atomic(&model_path(name, "strings"), |w| {
+        bincode::serde::encode_into_std_write(&strings, w, config)
+            .map(|_| ())
+            .map_err(io::Error::other)
+    })?;
+
+    // Merge shards into global (root_id, pos) bucket order.
+    let mut offsets: Vec<usize> = Vec::with_capacity(n_words * NUMBER_OF_POSITIONS + 1);
+    write_atomic(&model_path(name, "buckets"), |w| {
+        let mut pos = 0usize;
+        for root_id in 0..n_words {
+            let s = root_id % num_shards;
+            let base = (root_id / num_shards) * NUMBER_OF_POSITIONS;
+            let (flat, shard_offsets) = &flat_shards[s];
+            for i in 0..NUMBER_OF_POSITIONS {
+                offsets.push(pos);
+                let (start, end) = (shard_offsets[base + i], shard_offsets[base + i + 1]);
+                w.write_all(&flat[start..end])?;
+                pos += end - start;
+            }
+        }
+        offsets.push(pos); // end sentinel
+        Ok(())
+    })?;
+
+    write_atomic(&model_path(name, "buckets_offsets"), |w| {
+        bincode::serde::encode_into_std_write(&offsets, w, config)
+            .map(|_| ())
+            .map_err(io::Error::other)
+    })?;
+
+    Ok(())
+}
