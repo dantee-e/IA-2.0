@@ -16,7 +16,7 @@ pub type Bucket = Vec<(u32, u32)>;
 pub type Bucket = HashMap<u32, u32>;
 
 #[cfg(not(feature = "hash-buckets"))]
-fn increase_count(bucket: &mut Bucket, follower_id: u32) {
+pub(crate) fn increase_count(bucket: &mut Bucket, follower_id: u32) {
     match bucket.iter_mut().find(|e| e.0 == follower_id) {
         Some(e) => e.1 += 1,
         None => bucket.push((follower_id, 1)),
@@ -24,12 +24,12 @@ fn increase_count(bucket: &mut Bucket, follower_id: u32) {
 }
 
 #[cfg(feature = "hash-buckets")]
-fn increase_count(bucket: &mut Bucket, follower_id: u32) {
+pub(crate) fn increase_count(bucket: &mut Bucket, follower_id: u32) {
     *bucket.entry(follower_id).or_insert(0) += 1;
 }
 
 /// Bucket entries as a sorted vec of (follower id, count), for writing/reading.
-fn sorted_entries(bucket: &Bucket) -> Vec<(u32, u32)> {
+pub(crate) fn sorted_entries(bucket: &Bucket) -> Vec<(u32, u32)> {
     #[cfg(not(feature = "hash-buckets"))]
     let mut entries = bucket.clone();
     #[cfg(feature = "hash-buckets")]

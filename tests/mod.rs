@@ -23,6 +23,80 @@ mod tests {
     }
 
     #[test]
+    fn parallel_matches_sequential() {
+        let dir = std::env::temp_dir().join("ai2_par_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("a.txt"),
+            "the cat sat on the mat the cat sat on the dog the cat ran",
+        )
+        .unwrap();
+
+        let seq = train_from_dir(&dir).unwrap();
+        let par = train_from_dir_parallel(&dir, 4).unwrap();
+
+        assert_eq!(seq.strings.len(), par.strings.len());
+        assert_eq!(seq.buckets.len(), par.buckets.len());
+        for (word, _) in &seq.words {
+            for pos in 0..NUMBER_OF_POSITIONS as u16 {
+                let mut a = seq.followers(word, pos);
+                let mut b = par.followers(word, pos);
+                a.sort();
+                b.sort();
+                assert_eq!(a, b, "mismatch for '{word}' at pos {pos}");
+            }
+        }
+    }
+
+    #[test]
+    fn write_model_from_shards_matches_into_model() {
+        let dir = std::env::temp_dir().join("ai2_par_test2");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("a.txt"),
+            "the cat sat on the mat the cat sat on the dog the cat ran far away",
+        )
+        .unwrap();
+
+        let par = train_from_dir_parallel(&dir, 3).unwrap();
+        let via_into_model = par.into_model("unit_shard_assemble").unwrap();
+
+        // rebuild shards and write through the streaming path
+        let par2 = train_from_dir_parallel(&dir, 3).unwrap();
+        let TrainingModel {
+            words,
+            strings,
+            buckets,
+        } = par2;
+        // re-shard the assembled buckets
+        let num_shards = 3;
+        let n_words = strings.len();
+        let mut shards: Vec<Vec<ai2::Bucket>> = (0..num_shards)
+            .map(|s| vec![ai2::Bucket::default(); ai2::shard_len(n_words, s, num_shards)])
+            .collect();
+        for root_id in 0..n_words {
+            let s = root_id % num_shards;
+            let base = (root_id / num_shards) * NUMBER_OF_POSITIONS;
+            for i in 0..NUMBER_OF_POSITIONS {
+                shards[s][base + i] = buckets[root_id * NUMBER_OF_POSITIONS + i].clone();
+            }
+        }
+        ai2::write_model_from_shards(&words, &strings, &mut shards, num_shards, "unit_shard_stream")
+            .unwrap();
+        let via_stream = Model::load("unit_shard_stream").unwrap();
+
+        for (word, _) in &via_into_model.words {
+            for pos in 0..NUMBER_OF_POSITIONS as u16 {
+                let mut a = via_into_model.followers(word, pos).collect::<Vec<_>>();
+                let mut b = via_stream.followers(word, pos).collect::<Vec<_>>();
+                a.sort_by(|x, y| x.0.cmp(y.0));
+                b.sort_by(|x, y| x.0.cmp(y.0));
+                assert_eq!(a, b, "mismatch for '{word}' at pos {pos}");
+            }
+        }
+    }
+
+    #[test]
     fn classify_phrase() {
         let text = "To tokenize sentences in Rust, you can use specialized libraries depending on your needs, such as sentence for TTS-style lexing, rust-punkt for unsupervised sentence splitting, or vtext for Unicode-based segmentation. For high-performance NLP tasks involving modern language models (e.g., BERT, SentencePiece), the rust_tokenizers crate is the standard choice, offering support for WordPiece, BPE, and Unigram models.";
         let tokenized_text = tokenize(text);

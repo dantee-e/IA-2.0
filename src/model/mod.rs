@@ -4,7 +4,8 @@ mod read_memmap_lines;
 mod training_model;
 pub use generator_model::Model;
 use serde::de::DeserializeOwned;
-pub use training_model::TrainingModel;
+pub(crate) use training_model::{increase_count, sorted_entries};
+pub use training_model::{Bucket, TrainingModel};
 
 use std::{
     fs::File,
@@ -12,14 +13,14 @@ use std::{
     path::PathBuf,
 };
 
-pub(super) const DEFAULT_MODEL_PATH: &str = "models";
+pub(crate) const DEFAULT_MODEL_PATH: &str = "models";
 
-pub(super) fn model_path(name: &str, kind: &str) -> PathBuf {
+pub(crate) fn model_path(name: &str, kind: &str) -> PathBuf {
     PathBuf::from(format!("{DEFAULT_MODEL_PATH}/{name}_{kind}.bin"))
 }
 
 /// Writes to `<path>.tmp`, flushes, fsyncs, then atomically renames over `path`.
-pub(super) fn write_atomic(
+pub(crate) fn write_atomic(
     path: &PathBuf,
     write: impl FnOnce(&mut BufWriter<File>) -> io::Result<()>,
 ) -> io::Result<()> {
